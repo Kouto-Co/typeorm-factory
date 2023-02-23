@@ -1,6 +1,6 @@
 import { Factory } from './Factory';
 
-export class AssocOneAttribute<T> {
+export class AssocOneAttribute<T extends {}> {
   private readonly factory: Factory<T>;
 
   constructor(factory: Factory<T>) {

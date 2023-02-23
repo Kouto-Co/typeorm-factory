@@ -1,4 +1,4 @@
-import { getRepository, Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { AssocManyAttribute } from './AssocManyAttribute';
 import { AssocOneAttribute } from './AssocOneAttribute';
 import { FactoryAttribute } from './FactoryAttribute';
@@ -18,6 +18,7 @@ export type Attr<U> = [
 
     | Sequence<U[keyof U]>
     | AssocManyAttribute<any>
+    // @ts-ignore
     | AssocOneAttribute<U[keyof U]>
     | FactoryAttribute<any>
 ];
@@ -27,7 +28,7 @@ export type Attrs<U> = Array<Attr<U>>;
 /**
  * Factory defines attributes, sequences and associations for an Entity
  */
-export class Factory<T> {
+export class Factory<T extends {}> {
   /**
    * typeorm Entity class
    */
@@ -38,17 +39,24 @@ export class Factory<T> {
    */
   public attrs: Attrs<T>;
 
+  private datasource: DataSource;
+
   private privateRepository: Repository<T> | undefined = undefined;
 
   /** constructor */
-  constructor(Entity: IConstructable<T>, attrs?: Attrs<T>) {
+  constructor(
+    Entity: IConstructable<T>,
+    datasource: DataSource,
+    attrs?: Attrs<T>
+  ) {
     this.Entity = Entity;
+    this.datasource = datasource;
     this.attrs = attrs || [];
   }
 
   private get repository() {
     this.privateRepository =
-      this.privateRepository || getRepository(this.Entity);
+      this.privateRepository || this.datasource.getRepository(this.Entity);
     return this.privateRepository;
   }
 
@@ -60,7 +68,7 @@ export class Factory<T> {
       name,
       attr.clone()
     ]);
-    return new Factory<T>(this.Entity, clonedAttrs);
+    return new Factory<T>(this.Entity, this.datasource, clonedAttrs);
   }
 
   /**
@@ -102,9 +110,11 @@ export class Factory<T> {
    */
   public assocOne<K extends keyof T>(
     name: K,
+    // @ts-ignore
     factory: Factory<T[K]>
   ): Factory<T> {
     const clonedFactory = this.clone();
+    // @ts-ignore
     clonedFactory.attrs.push([name, new AssocOneAttribute(factory)] as any);
     return clonedFactory;
   }
@@ -115,6 +125,7 @@ export class Factory<T> {
   public build(attributes: Partial<T> = {}): T {
     const ignoreKeys = Object.keys(attributes);
     const obj = this.assignAttrs(new this.Entity(), ignoreKeys);
+    // @ts-ignore
     return this.repository.merge(obj, attributes);
   }
 
@@ -157,18 +168,21 @@ export class Factory<T> {
 
   private assignAsyncAttrs(obj: T, ignoreKeys: string[]): Promise<T> {
     return this.attrs.reduce((sum, [key, factory]) => {
-      return sum.then(async s => {
-        if (ignoreKeys.indexOf(key as string) === -1) {
-          s[key] = await factory.asyncValue();
+      return sum.then(
+        async (s): Promise<Awaited<T>> => {
+          if (ignoreKeys.indexOf(key as string) === -1) {
+            s[key] = await factory.asyncValue();
+          }
+          return s;
         }
-        return s;
-      });
+      );
     }, Promise.resolve(obj));
   }
 
   private async createEntity(attributes: Partial<T> = {}): Promise<T> {
     const ignoreKeys = Object.keys(attributes);
     const obj = await this.assignAsyncAttrs(new this.Entity(), ignoreKeys);
+    // @ts-ignore
     return this.repository.merge(obj, attributes);
   }
 }
