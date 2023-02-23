@@ -1,14 +1,14 @@
-import { Connection, createConnection } from 'typeorm';
+import { DataSource } from 'typeorm';
 import { Factory } from '../../src/Factory';
 import { Author } from '../fixtures/entity/Author';
 import { Comment } from '../fixtures/entity/Comment';
 import { Post, PostType } from '../fixtures/entity/Post';
 import { clean } from '../support/cleaner';
 
-let connection: Connection;
+let datasource: DataSource;
 
 beforeAll(async () => {
-  connection = await createConnection({
+  datasource = await new DataSource({
     database: 'typeorm-factory-test',
     entities: [Post, Comment, Author],
     host: 'localhost',
@@ -16,11 +16,11 @@ beforeAll(async () => {
     synchronize: true,
     type: 'postgres',
     username: process.env.PG_USERNAME
-  });
-  await clean();
+  }).initialize();
+  await clean(datasource);
 });
 
-afterAll(() => connection.close());
+afterAll(() => datasource.destroy());
 
 afterEach(() => clean);
 
@@ -31,15 +31,15 @@ describe('Factory Test', () => {
   let MostLikedPost: Factory<Post>;
 
   beforeEach(() => {
-    CommentFactory = new Factory(Comment)
+    CommentFactory = new Factory(Comment, datasource)
       .sequence('text', i => `text ${i}`)
       .attr('authorName', 'John Doe');
 
-    AuthorFactory = new Factory(Author)
+    AuthorFactory = new Factory(Author, datasource)
       .sequence('firstName', i => `John ${i}`)
       .sequence('lastName', i => `Doe ${i}`);
 
-    PostFactory = new Factory(Post)
+    PostFactory = new Factory(Post, datasource)
       .sequence('title', i => `title ${i}`)
       .sequence('text', i => `text ${i}`)
       .attr('likesCount', 10)

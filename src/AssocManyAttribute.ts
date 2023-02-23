@@ -1,6 +1,6 @@
 import { Factory } from './Factory';
 
-export class AssocManyAttribute<T> {
+export class AssocManyAttribute<T extends {}> {
   private readonly factory: Factory<T>;
   private readonly size: number;
 

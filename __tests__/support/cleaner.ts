@@ -1,7 +1,6 @@
-import { getConnection } from 'typeorm';
+import { DataSource } from 'typeorm';
 
-export const clean = () => {
-  const { manager } = getConnection();
+export const clean = (datasource: DataSource) => {
   const names = ['comment', 'post', 'author'];
-  return manager.query(names.map(name => `DELETE FROM ${name};`).join('\n'));
+  return datasource.query(names.map(name => `DELETE FROM ${name};`).join('\n'));
 };
