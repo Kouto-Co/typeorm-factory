@@ -27,7 +27,7 @@
     "test:ci": "jest --ci --testResultsProcessor=\"./node_modules/jest-junit-reporter\" --coverage",
     "test": "jest",
     "test:watch": "yarn test --watch",
-    "prepare": "yarn build"
+    "prepare": "tsc -p tsconfigBuild.json"
   },
   "husky": {
     "hooks": {
